@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+node_modules/
+*.log
+.DS_Store
+evidence/*.txt
+evidence/*.json
+screenshots/*.png
+screenshots/*.jpg
+!evidence/README.md
+!screenshots/README.md

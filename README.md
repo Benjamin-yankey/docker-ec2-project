@@ -101,8 +101,10 @@ docker-ec2-project/
 
 - `MYSQL_HOST`: Database host (default: db)
 - `MYSQL_USER`: Database user (default: appuser)
-- `MYSQL_PASSWORD`: Database password
+- `MYSQL_PASSWORD`: Database password (change for production)
 - `MYSQL_DATABASE`: Database name (default: appdb)
+
+**Security Note**: Use `.env.example` as template. Never commit `.env` files with real credentials.
 
 ### Ports
 
@@ -125,3 +127,7 @@ docker-ec2-project/
 - **Node.js**: 18 (Express)
 - **MySQL**: 8.0
 - **AWS EC2**: Amazon Linux 2, t2.micro (Free Tier)
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for implemented security measures and best practices.

@@ -18,10 +18,12 @@ Step-by-step guide for deploying the multi-container application on AWS EC2.
 
 Inbound rules:
 
-| Type | Protocol | Port | Source |
-|------|----------|------|--------|
-| SSH | TCP | 22 | Your IP |
-| Custom TCP | TCP | 5000 | 0.0.0.0/0 |
+| Type | Protocol | Port | Source | Description |
+|------|----------|------|--------|-------------|
+| SSH | TCP | 22 | Your IP | Restrict to your IP only |
+| Custom TCP | TCP | 5000 | 0.0.0.0/0 | Application access |
+
+**Security Note**: For production, restrict port 5000 to specific IPs or use a load balancer with HTTPS.
 
 ## Step 2: Connect to Instance
 
@@ -33,8 +35,9 @@ ssh -i your-key.pem ec2-user@<EC2-PUBLIC-IP>
 ## Step 3: Install Docker & Docker Compose
 
 ```bash
-# Update system
+# Update system and install security updates
 sudo yum update -y
+sudo yum install -y yum-utils
 
 # Install Docker
 sudo yum install docker -y
@@ -47,6 +50,13 @@ sudo usermod -aG docker ec2-user
 # Install Docker Compose
 sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 sudo chmod +x /usr/local/bin/docker-compose
+
+# Configure firewall (optional but recommended)
+sudo yum install -y firewalld
+sudo systemctl start firewalld
+sudo systemctl enable firewalld
+sudo firewall-cmd --permanent --add-port=5000/tcp
+sudo firewall-cmd --reload
 
 # Logout and login again
 exit

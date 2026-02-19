@@ -31,6 +31,12 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     
+    - name: Security Scan
+      run: |
+        docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+          aquasec/trivy image --severity HIGH,CRITICAL --exit-code 1 \
+          $(docker compose config | grep 'image:' | awk '{print $2}') || true
+    
     - name: Build and Test
       run: |
         docker compose up -d --build
@@ -82,6 +88,7 @@ jobs:
           git pull origin main
           docker compose down
           docker compose up -d --build
+          sudo yum update -y
         EOF
         
         rm -f ec2_key.pem

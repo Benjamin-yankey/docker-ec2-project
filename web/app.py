@@ -2,6 +2,9 @@ from flask import Flask, jsonify, request
 import mysql.connector
 import os
 import time
+import json
+import boto3
+from botocore.exceptions import ClientError
 
 app = Flask(__name__)
 
@@ -13,15 +16,40 @@ def set_security_headers(response):
     response.headers['X-XSS-Protection'] = '1; mode=block'
     return response
 
+def get_secret():
+    secret_name = os.getenv('AWS_SECRET_NAME')
+    if not secret_name:
+        return None
+    
+    try:
+        session = boto3.session.Session()
+        client = session.client(service_name='secretsmanager', region_name=os.getenv('AWS_REGION', 'us-east-1'))
+        response = client.get_secret_value(SecretId=secret_name)
+        return json.loads(response['SecretString'])
+    except ClientError:
+        return None
+
 def get_db():
+    secret = get_secret()
+    if secret:
+        host = secret.get('host', os.getenv('MYSQL_HOST', 'db'))
+        user = secret.get('username', os.getenv('MYSQL_USER', 'appuser'))
+        password = secret.get('password', os.getenv('MYSQL_PASSWORD', 'apppass123'))
+        database = secret.get('database', os.getenv('MYSQL_DATABASE', 'appdb'))
+    else:
+        host = os.getenv('MYSQL_HOST', 'db')
+        user = os.getenv('MYSQL_USER', 'appuser')
+        password = os.getenv('MYSQL_PASSWORD', 'apppass123')
+        database = os.getenv('MYSQL_DATABASE', 'appdb')
+    
     retries = 5
     while retries > 0:
         try:
             return mysql.connector.connect(
-                host=os.getenv('MYSQL_HOST', 'db'),
-                user=os.getenv('MYSQL_USER', 'appuser'),
-                password=os.getenv('MYSQL_PASSWORD', 'apppass123'),
-                database=os.getenv('MYSQL_DATABASE', 'appdb'),
+                host=host,
+                user=user,
+                password=password,
+                database=database,
                 connect_timeout=5
             )
         except mysql.connector.Error:

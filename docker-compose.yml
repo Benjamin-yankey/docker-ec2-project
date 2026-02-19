@@ -10,6 +10,8 @@ services:
       - MYSQL_USER=appuser
       - MYSQL_PASSWORD=apppass123
       - MYSQL_DATABASE=appdb
+      - AWS_SECRET_NAME=${AWS_SECRET_NAME:-}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
     depends_on:
       db:
         condition: service_healthy
@@ -25,6 +27,11 @@ services:
     read_only: false
     security_opt:
       - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
 
   db:
     image: mysql:8.0
@@ -45,6 +52,11 @@ services:
     networks:
       - app-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
 
 volumes:
   db-data:

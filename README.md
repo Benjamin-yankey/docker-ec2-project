@@ -27,26 +27,27 @@ This project demonstrates multi-container application deployment:
 
 ```bash
 # Deploy Flask version
-docker-compose up -d --build
+docker compose up -d --build
 
 # Verify (Note: Using port 5001 for macOS compatibility)
 curl http://localhost:5001
 
 # Cleanup
-docker-compose down --volumes
+docker compose down --volumes
 ```
 
-**Note**: Port 5001 is used locally (macOS compatibility). On EC2, you can use port 5000. See [PORT_CONFIGURATION.md](PORT_CONFIGURATION.md).
+**Note**: Port 5001 is used locally (macOS compatibility). On EC2, you can use port 5000.
 
 ### EC2 Deployment
 
 1. Launch EC2 instance (Amazon Linux 2, t2.micro)
 2. Install Docker + Docker Compose
-3. Upload project files
-4. **Optional**: Change port 5001 to 5000 in docker-compose.yml
-5. Run `docker-compose up -d --build`
-6. Access via `http://<EC2-IP>:5001` (or :5000 if changed)
-7. Cleanup with `docker-compose down --volumes`
+3. Attach IAM role with `secretsmanager:GetSecretValue` permission (optional)
+4. Upload project files
+5. **Optional**: Configure AWS Secrets Manager (see below)
+6. Run `docker compose up -d --build`
+7. Access via `http://<EC2-IP>:5001`
+8. Cleanup with `docker compose down --volumes`
 
 See [EC2_DEPLOYMENT_GUIDE.md](docs/EC2_DEPLOYMENT_GUIDE.md) for detailed steps.
 
@@ -102,8 +103,25 @@ docker-ec2-project/
 
 ## Configuration
 
+### AWS Secrets Manager (Optional)
+
+```bash
+# Create secret
+./setup-secrets.sh
+
+# Set environment variable
+export AWS_SECRET_NAME=docker-app-db-credentials
+
+# Deploy with Secrets Manager
+docker compose up -d --build
+```
+
+App automatically uses Secrets Manager if `AWS_SECRET_NAME` is set, otherwise falls back to environment variables.
+
 ### Environment Variables
 
+- `AWS_SECRET_NAME`: AWS Secrets Manager secret name (optional)
+- `AWS_REGION`: AWS region (default: us-east-1)
 - `MYSQL_HOST`: Database host (default: db)
 - `MYSQL_USER`: Database user (default: appuser)
 - `MYSQL_PASSWORD`: Database password (change for production)
@@ -123,11 +141,9 @@ docker-ec2-project/
 
 - [EC2 Deployment Guide](docs/EC2_DEPLOYMENT_GUIDE.md) - Complete EC2 setup
 - [Testing Guide](docs/TESTING_GUIDE.md) - Testing procedures
-- [AWS Secrets Manager](AWS_SECRETS_MANAGER.md) - Secure credential management
-- [CI/CD Setup](CI_CD_SETUP.md) - GitHub Actions pipeline
+- [CI/CD Setup](CI_CD_SETUP.md) - GitHub Actions pipeline with security scanning
 - [Submission Checklist](SUBMISSION_CHECKLIST.md) - Deliverables
 - [Quick Reference](QUICK_REFERENCE.md) - Command cheat sheet
-- [Port Configuration](PORT_CONFIGURATION.md) - macOS port notes
 
 ## Technologies
 
@@ -140,4 +156,19 @@ docker-ec2-project/
 
 ## Security
 
-See [SECURITY.md](SECURITY.md) for implemented security measures and best practices.
+**Implemented:**
+- ✅ Non-root container users
+- ✅ Resource limits (CPU/Memory)
+- ✅ Security headers (XSS, CSRF protection)
+- ✅ Trivy vulnerability scanning in CI/CD
+- ✅ AWS Secrets Manager integration
+- ✅ Input validation
+- ✅ No new privileges flag
+- ✅ Auto EC2 security updates
+
+**Recommended for Production:**
+- Restrict EC2 Security Group SSH to your IP only
+- Enable HTTPS with Let's Encrypt
+- Use VPC with private subnets
+- Enable CloudTrail and GuardDuty
+- Regular backups (EBS snapshots)

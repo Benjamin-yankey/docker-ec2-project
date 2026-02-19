@@ -5,6 +5,24 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      aws_access_key_id:
+        description: 'AWS Access Key ID'
+        required: false
+      aws_secret_access_key:
+        description: 'AWS Secret Access Key'
+        required: false
+      ec2_host:
+        description: 'EC2 Host IP'
+        required: false
+      ec2_user:
+        description: 'EC2 User (default: ec2-user)'
+        required: false
+        default: 'ec2-user'
+      ec2_ssh_key:
+        description: 'EC2 SSH Private Key'
+        required: false
 
 jobs:
   test:
@@ -36,23 +54,25 @@ jobs:
   deploy:
     needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && secrets.EC2_HOST != ''
     
     steps:
     - uses: actions/checkout@v3
     
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
+      if: github.event.inputs.aws_access_key_id != '' || secrets.AWS_ACCESS_KEY_ID != ''
+      uses: aws-actions/configure-aws-credentials@v4
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-access-key-id: ${{ github.event.inputs.aws_access_key_id || secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ github.event.inputs.aws_secret_access_key || secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
     
     - name: Deploy to EC2
+      if: github.event.inputs.ec2_host != '' || secrets.EC2_HOST != ''
       env:
-        EC2_HOST: ${{ secrets.EC2_HOST }}
-        EC2_USER: ${{ secrets.EC2_USER }}
-        EC2_KEY: ${{ secrets.EC2_SSH_KEY }}
+        EC2_HOST: ${{ github.event.inputs.ec2_host || secrets.EC2_HOST }}
+        EC2_USER: ${{ github.event.inputs.ec2_user || secrets.EC2_USER || 'ec2-user' }}
+        EC2_KEY: ${{ github.event.inputs.ec2_ssh_key || secrets.EC2_SSH_KEY }}
       run: |
         echo "$EC2_KEY" > ec2_key.pem
         chmod 400 ec2_key.pem

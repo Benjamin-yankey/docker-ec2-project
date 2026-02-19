@@ -15,7 +15,7 @@ jobs:
     
     - name: Build and Test
       run: |
-        docker-compose up -d --build
+        docker compose up -d --build
         sleep 15
         
     - name: Health Check
@@ -31,7 +31,7 @@ jobs:
         curl -f http://localhost:5001/api/stats || exit 1
         
     - name: Cleanup
-      run: docker-compose down --volumes
+      run: docker compose down --volumes
 
   deploy:
     needs: test
@@ -60,8 +60,8 @@ jobs:
         ssh -o StrictHostKeyChecking=no -i ec2_key.pem $EC2_USER@$EC2_HOST << 'EOF'
           cd ~/docker-ec2-project
           git pull origin main
-          docker-compose down
-          docker-compose up -d --build
+          docker compose down
+          docker compose up -d --build
         EOF
         
         rm -f ec2_key.pem

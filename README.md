@@ -6,8 +6,10 @@ Two-tier application (Flask/Node.js + MySQL) deployed using Docker Compose on AW
 
 This project demonstrates multi-container application deployment:
 - **Web Application**: Flask (Python) or Node.js (Express) with RESTful API
+- **Modern UI**: Responsive gradient design with real-time updates
 - **Database**: MySQL 8.0 with persistent storage
 - **Orchestration**: Docker Compose
+- **Security**: AWS Secrets Manager support (optional)
 - **Deployment**: AWS EC2 Amazon Linux 2 (Free Tier)
 
 ## Architecture
@@ -27,21 +29,24 @@ This project demonstrates multi-container application deployment:
 # Deploy Flask version
 docker-compose up -d --build
 
-# Verify
-curl http://localhost:5000
+# Verify (Note: Using port 5001 for macOS compatibility)
+curl http://localhost:5001
 
 # Cleanup
 docker-compose down --volumes
 ```
+
+**Note**: Port 5001 is used locally (macOS compatibility). On EC2, you can use port 5000. See [PORT_CONFIGURATION.md](PORT_CONFIGURATION.md).
 
 ### EC2 Deployment
 
 1. Launch EC2 instance (Amazon Linux 2, t2.micro)
 2. Install Docker + Docker Compose
 3. Upload project files
-4. Run `docker-compose up -d --build`
-5. Access via `http://<EC2-IP>:5000`
-6. Cleanup with `docker-compose down --volumes`
+4. **Optional**: Change port 5001 to 5000 in docker-compose.yml
+5. Run `docker-compose up -d --build`
+6. Access via `http://<EC2-IP>:5001` (or :5000 if changed)
+7. Cleanup with `docker-compose down --volumes`
 
 See [EC2_DEPLOYMENT_GUIDE.md](docs/EC2_DEPLOYMENT_GUIDE.md) for detailed steps.
 
@@ -59,12 +64,12 @@ See [EC2_DEPLOYMENT_GUIDE.md](docs/EC2_DEPLOYMENT_GUIDE.md) for detailed steps.
 
 ```bash
 # Verify deployment
-curl http://localhost:5000
-curl http://localhost:5000/api/health
-curl http://localhost:5000/api/users
+curl http://localhost:5001
+curl http://localhost:5001/api/health
+curl http://localhost:5001/api/users
 
 # Create user
-curl -X POST http://localhost:5000/api/users \
+curl -X POST http://localhost:5001/api/users \
   -H "Content-Type: application/json" \
   -d '{"name":"John","email":"john@example.com"}'
 
@@ -108,16 +113,21 @@ docker-ec2-project/
 
 ### Ports
 
-- Flask: 5000
+- Flask: 5001 (host) → 5000 (container)
 - Node.js: 3000
 - MySQL: 3306 (internal only)
+
+**Note**: Port 5001 used locally for macOS compatibility. Can use 5000 on EC2.
 
 ## Documentation
 
 - [EC2 Deployment Guide](docs/EC2_DEPLOYMENT_GUIDE.md) - Complete EC2 setup
 - [Testing Guide](docs/TESTING_GUIDE.md) - Testing procedures
+- [AWS Secrets Manager](AWS_SECRETS_MANAGER.md) - Secure credential management
+- [CI/CD Setup](CI_CD_SETUP.md) - GitHub Actions pipeline
 - [Submission Checklist](SUBMISSION_CHECKLIST.md) - Deliverables
 - [Quick Reference](QUICK_REFERENCE.md) - Command cheat sheet
+- [Port Configuration](PORT_CONFIGURATION.md) - macOS port notes
 
 ## Technologies
 

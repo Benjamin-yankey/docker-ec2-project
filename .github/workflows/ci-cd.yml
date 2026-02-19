@@ -1,0 +1,67 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Build and Test
+      run: |
+        docker-compose up -d --build
+        sleep 15
+        
+    - name: Health Check
+      run: |
+        curl -f http://localhost:5001/api/health || exit 1
+        
+    - name: API Tests
+      run: |
+        curl -f http://localhost:5001/api/users || exit 1
+        curl -X POST http://localhost:5001/api/users \
+          -H "Content-Type: application/json" \
+          -d '{"name":"Test User","email":"test@example.com"}' || exit 1
+        curl -f http://localhost:5001/api/stats || exit 1
+        
+    - name: Cleanup
+      run: docker-compose down --volumes
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+    
+    - name: Deploy to EC2
+      env:
+        EC2_HOST: ${{ secrets.EC2_HOST }}
+        EC2_USER: ${{ secrets.EC2_USER }}
+        EC2_KEY: ${{ secrets.EC2_SSH_KEY }}
+      run: |
+        echo "$EC2_KEY" > ec2_key.pem
+        chmod 400 ec2_key.pem
+        
+        ssh -o StrictHostKeyChecking=no -i ec2_key.pem $EC2_USER@$EC2_HOST << 'EOF'
+          cd ~/docker-ec2-project
+          git pull origin main
+          docker-compose down
+          docker-compose up -d --build
+        EOF
+        
+        rm -f ec2_key.pem

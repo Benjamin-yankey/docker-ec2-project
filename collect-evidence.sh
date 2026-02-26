@@ -3,18 +3,19 @@
 
 echo "📸 Collecting Evidence..."
 
+# Create a directory to store the collected evidence files
 mkdir -p evidence
 
-# Container status
+# Save the current status of all containers to a file
 echo "Collecting container status..."
 docker-compose ps > evidence/docker-ps.txt
 
-# Logs
+# Save the application and database logs to separate files
 echo "Collecting logs..."
 docker-compose logs web > evidence/docker-logs-web.txt
 docker-compose logs db > evidence/docker-logs-db.txt
 
-# API responses
+# Capture responses from the key API endpoints to verify they are working correctly
 echo "Testing API endpoints..."
 {
   echo "=== Health Check ==="

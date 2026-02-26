@@ -1,10 +1,12 @@
 #!/bin/bash
 
+# Configuration for the AWS Secret
 SECRET_NAME="docker-app-db-credentials"
 REGION="us-east-1"
 
 echo "Creating secret in AWS Secrets Manager..."
 
+# Create a new secret containing database credentials with a randomly generated password
 aws secretsmanager create-secret \
   --name "$SECRET_NAME" \
   --description "Database credentials for Docker app" \

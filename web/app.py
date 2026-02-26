@@ -8,7 +8,7 @@ from botocore.exceptions import ClientError
 
 app = Flask(__name__)
 
-# Security headers
+# Middleware to set security-related HTTP headers for all outgoing responses
 @app.after_request
 def set_security_headers(response):
     response.headers['X-Content-Type-Options'] = 'nosniff'
@@ -16,6 +16,7 @@ def set_security_headers(response):
     response.headers['X-XSS-Protection'] = '1; mode=block'
     return response
 
+# Retrieve database credentials from AWS Secrets Manager if configured
 def get_secret():
     secret_name = os.getenv('AWS_SECRET_NAME')
     if not secret_name:
@@ -29,8 +30,10 @@ def get_secret():
     except ClientError:
         return None
 
+# Establish a connection to the MySQL database with retry logic
 def get_db():
     secret = get_secret()
+    # Use secrets from AWS if available, otherwise fall back to environment variables
     if secret:
         host = secret.get('host', os.getenv('MYSQL_HOST', 'db'))
         user = secret.get('username', os.getenv('MYSQL_USER', 'appuser'))
@@ -42,6 +45,7 @@ def get_db():
         password = os.getenv('MYSQL_PASSWORD', 'apppass123')
         database = os.getenv('MYSQL_DATABASE', 'appdb')
     
+    # Retry connection up to 5 times if the database is not immediately available
     retries = 5
     while retries > 0:
         try:
@@ -58,6 +62,7 @@ def get_db():
                 raise
             time.sleep(2)
 
+# Main route that serves the single-page application frontend
 @app.route('/')
 def index():
     return '''<!DOCTYPE html>
@@ -485,6 +490,7 @@ def index():
 </body>
 </html>'''
 
+# Health check endpoint to verify database connectivity
 @app.route('/api/health')
 def health():
     try:
@@ -494,6 +500,7 @@ def health():
     except:
         return jsonify({"status": "unhealthy"}), 500
 
+# Endpoint to retrieve the list of all users
 @app.route('/api/users', methods=['GET'])
 def get_users():
     conn = get_db()
@@ -504,18 +511,21 @@ def get_users():
     conn.close()
     return jsonify({"users": users})
 
+# Endpoint to create a new user with validation and error handling
 @app.route('/api/users', methods=['POST'])
 def create_user():
     data = request.json
-    # Input validation
+    # Validate that both name and email are provided
     if not data or 'name' not in data or 'email' not in data:
         return jsonify({"error": "Name and email required"}), 400
+    # Limit input length to prevent potential database issues
     if len(data['name']) > 100 or len(data['email']) > 100:
         return jsonify({"error": "Input too long"}), 400
     
     try:
         conn = get_db()
         cursor = conn.cursor()
+        # Use parameterized query to prevent SQL injection
         cursor.execute("INSERT INTO users (name, email) VALUES (%s, %s)", (data['name'], data['email']))
         conn.commit()
         user_id = cursor.lastrowid
@@ -523,10 +533,12 @@ def create_user():
         conn.close()
         return jsonify({"id": user_id, "message": "User created"}), 201
     except mysql.connector.IntegrityError:
+        # Handle duplicate email entries (unique constraint in database)
         return jsonify({"error": "Email already exists"}), 409
     except Exception as e:
         return jsonify({"error": "Database error"}), 500
 
+# Endpoint to retrieve system-wide statistics
 @app.route('/api/stats')
 def stats():
     conn = get_db()
@@ -537,6 +549,7 @@ def stats():
     conn.close()
     return jsonify({"total_users": count, "database": "appdb"})
 
+# Endpoint to delete a specific user by their unique ID
 @app.route('/api/users/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):
     try:
@@ -553,5 +566,7 @@ def delete_user(user_id):
     except Exception as e:
         return jsonify({"error": "Database error"}), 500
 
+# Entry point for running the Flask application
 if __name__ == '__main__':
+    # Listen on all available network interfaces at port 5000
     app.run(host='0.0.0.0', port=5000)

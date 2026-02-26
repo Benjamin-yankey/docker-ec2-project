@@ -2,13 +2,13 @@
 
 echo "🗑️  Destroying Docker resources..."
 
-# Stop and remove containers, networks, volumes
+# Stop and remove containers, networks, and associated volumes
 docker compose down --volumes --remove-orphans
 
-# Remove images
+# Stop and remove containers, then delete all images used by the services
 docker compose down --rmi all --volumes --remove-orphans
 
-# Prune system (optional - removes all unused Docker resources)
+# Prompt user to prune the entire Docker system to reclaim disk space
 read -p "Remove all unused Docker resources? (y/n): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -17,7 +17,7 @@ fi
 
 echo "✅ Local cleanup complete"
 
-# AWS cleanup (optional)
+# Optional step to delete the database credentials secret from AWS
 read -p "Delete AWS Secrets Manager secret? (y/n): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then

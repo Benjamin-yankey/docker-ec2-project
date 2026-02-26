@@ -51,6 +51,26 @@ docker compose down --volumes
 
 See [EC2_DEPLOYMENT_GUIDE.md](docs/EC2_DEPLOYMENT_GUIDE.md) for detailed steps.
 
+## CI/CD Pipeline & Security Scanning
+
+This project includes a automated CI/CD pipeline using **GitHub Actions** that ensures code quality and security before deployment.
+
+### Vulnerability Scanning with Trivy
+We use **Trivy**, a comprehensive security scanner, to identify vulnerabilities in our Docker images during the CI process.
+
+- **Automated Scanning**: The pipeline automatically triggers Trivy on every push to `main` or `master` branches.
+- **Severity Filtering**: The scan is configured to flag **HIGH** and **CRITICAL** vulnerabilities.
+- **Fail-Safe Mechanism**: While it reports vulnerabilities, the current configuration allows the pipeline to continue (using `|| true`) to ensure deployment during development, but provides clear logs for security auditing.
+
+The scan command used in the pipeline:
+```yaml
+- name: Security Scan
+  run: |
+    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+      aquasec/trivy image --severity HIGH,CRITICAL --exit-code 1 \
+      $(docker compose config | grep 'image:' | awk '{print $2}') || true
+```
+
 ## API Endpoints
 
 | Endpoint | Method | Description |
